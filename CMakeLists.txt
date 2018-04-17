@@ -19,7 +19,8 @@ pkg_search_module(TinyLog REQUIRED tiny-log>=0.1.0)
 pkg_search_module(XML REQUIRED libxml-2.0)
 set(_LIBRARIES ${Tiny_LIBRARIES} ${TinyLog_LIBRARIES} ${XML_LIBRARIES} dl)
 set(_INCLUDE_DIRS ${Tiny_INCLUDE_DIRS} ${TinyLog_INCLUDE_DIRS} ${XML_INCLUDE_DIRS})
-include_directories(${_INCLUDE_DIRS} ${CMAKE_BINARY_DIR})
+include_directories(. ${_INCLUDE_DIRS} ${CMAKE_BINARY_DIR})
+include_directories(${CMAKE_SOURCE_DIR} ${_INCLUDE_DIRS} ${CMAKE_BINARY_DIR})
 
 
 file(GLOB lgb_SRC gluonbot/*.c gluonbot/events/*.c)
@@ -30,8 +31,10 @@ target_link_libraries(libgluonbot ${_LIBRARIES})
 file(GLOB gb_SRC bin/*.c)
 add_executable(gluonbot ${gb_SRC})
 target_link_libraries(gluonbot libgluonbot)
-target_include_directories(gluonbot PRIVATE ${Tiny_INCLUDE_DIRS})
 
+file(GLOB gb_core_SRC core/*.c)
+add_library(gb-core SHARED ${gb_core_SRC})
+target_link_libraries(gb-core libgluonbot)
 
 configure_file(${CMAKE_SOURCE_DIR}/gluonbot.pc.in ${CMAKE_BINARY_DIR}/gluonbot.pc)
 install(FILES ${CMAKE_BINARY_DIR}/gluonbot.pc DESTINATION lib/pkgconfig)

@@ -1,5 +1,3 @@
-#pragma once
-
 #include "gluonbot/Bot.h"
 #include "gluonbot/ChannelDesc.h"
 #include "gluonbot/Event.h"

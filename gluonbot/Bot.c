@@ -22,7 +22,11 @@ void gb_bot_init() {
   GBBot.sockets = t_map_new();
   GBBot.plugins = t_map_new();
   
-  GBBot.prefix = strdup("!");  
+  GBBot.prefix = strdup("!");
+  
+  GBPlugin* p = gb_plugin_new("core");
+  t_unref(t_map_set_(GBBot.plugins, "core", p));
+  t_unref(p);
 }
 
 static void init_server(xmlNodePtr node) {
@@ -180,6 +184,24 @@ void gb_bot_load_config(char* config_path) {
   for(xmlNodePtr c = root->children; c != NULL; c = c->next) {
     if (strcmp((char*) c->name, "server") == 0) {
       init_server(c);
+    } else if (strcmp((char*) c->name, "plugin") == 0) {
+      char* name = NULL;
+      
+      for (xmlAttrPtr attr = root->properties; attr != NULL; attr = attr->next) {
+        if (strcmp((char*) attr->name, "name") == 0) {
+          name = (char*) xmlNodeListGetString(root->doc, attr->children, 1);
+          tl_debug(l, "plugins <- %s", name);
+        }
+      }
+      
+      if (name == NULL) {
+        tl_error(l, "Noticed an unnamed plugin node! (line %d)", c->line);
+        continue;
+      }
+      
+      GBPlugin* p = gb_plugin_new(name);
+      t_unref(t_map_set_(GBBot.plugins, name, p));
+      t_unref(p);
     }
   }
   
