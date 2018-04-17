@@ -86,7 +86,8 @@ int main(int argc, char** argv) {
 
   tl_important("main", "Hello, bot!");
   
-  gb_bot_init(config_file);
+  gb_bot_init();
+  gb_bot_load_config(config_file);
 
   signal(SIGTERM, sighandler);
   signal(SIGINT, sighandler);

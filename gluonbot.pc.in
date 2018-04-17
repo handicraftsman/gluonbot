@@ -1,5 +1,6 @@
 Name: gluonbot
 Description: An IRC bot framework
 Version: @PROJECT_VERSION@
+Requires: tiny >= 0.6.0 tiny-log >= 0.1.0 libxml-2.0
 Cflags: -I@CMAKE_INSTALL_PREFIX@/include/
-Libs: -L@CMAKE_INSTALL_PREFIX@/lib/ -ltiny
+Libs: -L@CMAKE_INSTALL_PREFIX@/lib/ -lgluonbot

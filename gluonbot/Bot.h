@@ -1,5 +1,7 @@
 #pragma once
 
+#include "IRCSocket.h"
+
 #include <tiny.h>
 
 typedef struct _GBBot {

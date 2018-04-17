@@ -1,7 +1,7 @@
-<config>
+<gluonbot-config>
   <server name="freenode">
     <address host="irc.freenode.net" port="6667" />
     <credentials nick="GluonBot" user="GluonBot" rnam="An IRC bot in C" />
     <channel name="##foobarbaz" />
   </server>
-</config>
+</gluonbot-config>
