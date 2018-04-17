@@ -187,7 +187,7 @@ void gb_bot_load_config(char* config_path) {
     } else if (strcmp((char*) c->name, "plugin") == 0) {
       char* name = NULL;
       
-      for (xmlAttrPtr attr = root->properties; attr != NULL; attr = attr->next) {
+      for (xmlAttrPtr attr = c->properties; attr != NULL; attr = attr->next) {
         if (strcmp((char*) attr->name, "name") == 0) {
           name = (char*) xmlNodeListGetString(root->doc, attr->children, 1);
           tl_debug(l, "plugins <- %s", name);

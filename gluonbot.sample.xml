@@ -4,4 +4,5 @@
     <credentials nick="GluonBot" user="GluonBot" rnam="An IRC bot in C" />
     <channel name="##foobarbaz" />
   </server>
+  <plugin name="chanop" />
 </gluonbot-config>
