@@ -1,6 +1,10 @@
 #pragma once
 
-#include "EventType.h"
+typedef enum GBEventType {
+  GBEventType_NONE,
+  GBEventType_TEST,
+  _GBEventType_SIZE
+} GBEventType;
 
 typedef struct GBEvent GBEvent;
 

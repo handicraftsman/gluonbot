@@ -1,4 +1,4 @@
-<gluonbot-config>
+<gluonbot-config prefix="[">
   <server name="freenode">
     <address host="irc.freenode.net" port="6667" />
     <credentials nick="GluonBot" user="GluonBot" rnam="An IRC bot in C" />

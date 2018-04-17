@@ -7,6 +7,8 @@
 typedef struct _GBBot {
   TMap* sockets;
   TMap* plugins;
+  
+  char* prefix;
 } _GBBot;
 
 _GBBot GBBot;
