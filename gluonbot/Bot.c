@@ -1,4 +1,5 @@
 #include "Bot.h"
+#include "Bot.h"
 #include "ChannelDesc.h"
 #include "IRCSocket.h"
 #include "Plugin.h"
@@ -10,6 +11,7 @@
 #include <libxml/tree.h>
 #include <libxml/parser.h>
 
+#include <tiny.h>
 #include <tiny-log.h>
 
 _GBBot GBBot = {};
@@ -28,6 +30,14 @@ void gb_bot_init() {
   t_unref(t_map_set_(GBBot.plugins, "core", p));
   t_unref(p);
 }
+
+void gb_bot_deinit() {
+  t_unref(GBBot.sockets);
+  t_unref(GBBot.plugins);
+  
+  t_free(GBBot.prefix);
+}
+
 
 static void init_server(xmlNodePtr node) {
   char* name = NULL;
@@ -110,7 +120,7 @@ static void init_server(xmlNodePtr node) {
   }
   
   if (ok) {
-    IRCSocket* sock = gb_ircsocket_new(name);
+    GBIRCSocket* sock = gb_ircsocket_new(name);
   
     free(sock->host);
     sock->host = strdup(host);
@@ -210,10 +220,10 @@ void gb_bot_load_config(char* config_path) {
   xmlCleanupParser();
 }
 
-void gb_bot_deinit() {
-  t_unref(GBBot.sockets);
-  t_unref(GBBot.plugins);
-  
-  t_free(GBBot.prefix);
+void gb_bot_connect() {
+  t_list_foreach(GBBot.sockets->pairs, n) {
+    TMapPair* p = n->unit->obj;
+    GBIRCSocket* sock = p->unit->obj;
+    gb_ircsocket_connect(sock);
+  }
 }
-

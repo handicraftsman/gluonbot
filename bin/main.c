@@ -17,7 +17,7 @@ void display_usage(char* pname) {
   fprintf(stderr, "Usage: %s [OPTIONS]\n\n", pname);
   fprintf(stderr, "Available options: \n");
   fprintf(stderr, "  -h        --help                Show this message\n");
-  fprintf(stderr, "  -c FILE   --config-file FILE    Config file [./gluonbot.json]\n");
+  fprintf(stderr, "  -c FILE   --config-file FILE    Config file [./gluonbot.xml]\n");
   //fprintf(stderr, "  -b FILE   --database-file FILE  Database file [./particlebot.db]\n");
   fprintf(stderr, "  -l LEVEL  --log-level LEVEL     Log level [info]\n");
   fprintf(stderr, "Possible log levels: debug, [io | irc], info, warning, error, important, critical\n");
@@ -64,7 +64,7 @@ int main(int argc, char** argv) {
     {"log-level",     required_argument, NULL, 'l'},
   };
 
-  char* config_file = "./gluonbot.json";
+  char* config_file = "./gluonbot.xml";
 
   while ((opt = getopt_long(argc, argv, "hc:d:l:", long_options, NULL)) != EOF)
     switch(opt) {
@@ -93,6 +93,8 @@ int main(int argc, char** argv) {
   signal(SIGINT, sighandler);
   signal(SIGHUP, sighandler);
   tl_important("main", "Press Ctrl+C to stop the bot");
+  
+  gb_bot_connect();
   
   while (true) {
     int c = getc(stdin);

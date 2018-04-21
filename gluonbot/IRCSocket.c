@@ -5,11 +5,12 @@
 
 #include <tiny-log.h>
 
-#include "IRCSocket.h"
 #include "ChannelDesc.h"
+#include "Event.h"
+#include "IRCSocket.h"
 
-IRCSocket* gb_ircsocket_new(char* name) {
-  IRCSocket* self = (IRCSocket*) t_malloc(sizeof(IRCSocket));
+GBIRCSocket* gb_ircsocket_new(char* name) {
+  GBIRCSocket* self = (GBIRCSocket*) t_malloc(sizeof(GBIRCSocket));
   if (!self) {
     perror("gb_ircsocket_new");
     exit(1);
@@ -37,7 +38,7 @@ IRCSocket* gb_ircsocket_new(char* name) {
   return self;
 }
 
-void gb_ircsocket_destroy(IRCSocket* self) {
+void gb_ircsocket_destroy(GBIRCSocket* self) {
   assert(self != NULL);
   
   if (self->name != NULL) t_free(self->name);
@@ -53,7 +54,7 @@ void gb_ircsocket_destroy(IRCSocket* self) {
   if (self->autojoin != NULL) t_unref(self->autojoin);
 }
 
-void gb_ircsocket_dump(IRCSocket* self) {
+void gb_ircsocket_dump(GBIRCSocket* self) {
   assert(self != NULL);
   t_ref(self);
   
@@ -62,10 +63,21 @@ void gb_ircsocket_dump(IRCSocket* self) {
   tl_debug(self->l, "has-pass <- %d", self->pass != NULL);
   tl_debug(self->l, "rnam <- %s", self->rnam);
   
-  for (TListNode* n = t_list_first(self->autojoin); n != NULL; n = t_list_next(n)) {
+  t_list_foreach(self->autojoin, n) {
     GBChannelDesc* chan = n->unit->obj;
     tl_debug(self->l, "autojoin <- %s %d", chan->name, chan->pass != NULL);
   }
+  
+  t_unref(self);
+}
+
+void gb_ircsocket_connect(GBIRCSocket* self) {
+  assert(self != NULL);
+  t_ref(self);
+  
+  GBEvent* e = gb_event_connect_new(self);
+  gb_event_fire(e);
+  t_unref(e);
   
   t_unref(self);
 }

@@ -4,7 +4,7 @@
 
 #include <tiny.h>
 
-typedef struct IRCSocket {
+typedef struct GBIRCSocket {
   t_gcunit_use();
   
   char* name;
@@ -19,9 +19,11 @@ typedef struct IRCSocket {
   char* rnam;
   
   TList* autojoin;
-} IRCSocket;
+} GBIRCSocket;
 
-IRCSocket* gb_ircsocket_new(char* name);
-void gb_ircsocket_destroy(IRCSocket* self);
+GBIRCSocket* gb_ircsocket_new(char* name);
+void gb_ircsocket_destroy(GBIRCSocket* self);
 
-void gb_ircsocket_dump(IRCSocket* self);
+void gb_ircsocket_dump(GBIRCSocket* self);
+
+void gb_ircsocket_connect(GBIRCSocket* self);

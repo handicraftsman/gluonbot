@@ -32,8 +32,8 @@ GBPlugin* gb_plugin_new(char* name) {
   
   char* plugin_paths[] = {
     "./libgb-%s.so",
-    "/usr/share/libgb-%s.so",
-    "/usr/local/share/libgb-%s.so",
+    "/usr/lib/libgb-%s.so",
+    "/usr/local/lib/libgb-%s.so",
     NULL
   };
     
