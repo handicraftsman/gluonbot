@@ -8,6 +8,8 @@
 typedef enum GBEventType {
   GBEventType_NONE,
   GBEventType_CONNECT,
+  GBEventType_DISCONNECT,
+  GBEventType_MESSAGE,
   _GBEventType_SIZE
 } GBEventType;
 
@@ -31,3 +33,5 @@ void gb_event_fire(GBEvent* e);
 
 
 GBEvent* gb_event_connect_new(GBIRCSocket* sock);
+GBEvent* gb_event_disconnect_new(GBIRCSocket* sock);
+GBEvent* gb_message_event_new(GBIRCSocket* sock);

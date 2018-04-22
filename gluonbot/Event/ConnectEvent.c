@@ -43,9 +43,9 @@ GBEvent* gb_event_connect_new(GBIRCSocket* sock) {
 }
 
 void gb_event_connect_destroy(GBEventConnect* self) {
+  assert(self != NULL);
+  
   t_unref(self->sock);
 }
 
-void gb_event_connect_handle(GBEventConnect* self) {
-  tl_important(self->sock->l, "Connected!");
-}
+void gb_event_connect_handle(GBEventConnect* self) {}

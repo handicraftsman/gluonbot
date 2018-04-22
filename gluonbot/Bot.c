@@ -212,6 +212,8 @@ void gb_bot_load_config(char* config_path) {
       GBPlugin* p = gb_plugin_new(name);
       t_unref(t_map_set_(GBBot.plugins, name, p));
       t_unref(p);
+      
+      xmlFree(name);
     }
   }
   

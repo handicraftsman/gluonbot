@@ -51,6 +51,6 @@ install(
   LIBRARY DESTINATION lib
 )
 
-install(FILES gluonbot.h DESTINATION include)
+install(FILES gluonbot.h gluonbot-plugin.h DESTINATION include)
 file(GLOB gb_HDR gluonbot/*.h)
 install(FILES ${gb_HDR} DESTINATION include/gluonbot)

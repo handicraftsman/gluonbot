@@ -61,7 +61,7 @@ GBPlugin* gb_plugin_new(char* name) {
     tl_critical(self->l, "Unable to load myself: %s", error);
     exit(1);
   }
-  
+    
   tl_important(self->l, "Hello, bot!");
   
   GBPlugin** p = (GBPlugin**) dlsym(self->handle, "gb_self");
