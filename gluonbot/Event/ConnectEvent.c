@@ -7,22 +7,8 @@
 
 #include <tiny-log.h>
 
-/*
- * Connect
- */
-
-typedef struct GBEventConnect {
-  GBEvent _parent;
-
-  GBIRCSocket* sock;
-} GBEventConnect;
-
 static void gb_event_connect_destroy(GBEventConnect* self);
 static void gb_event_connect_handle(GBEventConnect* self);
-
-static GBEventVTable gb_event_connect_vtable = {
-  .handle = (GBEventHandleFunc) gb_event_connect_handle
-};
 
 GBEvent* gb_event_connect_new(GBIRCSocket* sock) {  
   assert(sock != NULL);
@@ -36,7 +22,7 @@ GBEvent* gb_event_connect_new(GBIRCSocket* sock) {
   
   t_gcunit((GBEvent*) self) = t_gcunit_new_(self, gb_event_connect_destroy);
   ((GBEvent*) self)->type   = GBEventType_CONNECT;
-  ((GBEvent*) self)->vtable = &gb_event_connect_vtable;
+  ((GBEvent*) self)->handle = (GBEventHandleFunc) gb_event_connect_handle;
   self->sock = sock;
   
   return (GBEvent*) self;

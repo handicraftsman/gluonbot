@@ -1,13 +1,15 @@
 #define _GNU_SOURCE
 
 #include <assert.h>
+#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include <pthread.h>
-#include <sys/types.h>
 #include <sys/socket.h>
+#include <sys/time.h>
+#include <sys/types.h>
 #include <unistd.h>
 #include <netdb.h>
 
@@ -16,6 +18,8 @@
 #include "ChannelDesc.h"
 #include "Event.h"
 #include "IRCSocket.h"
+
+// line 301
 
 GBIRCSocket* gb_ircsocket_new(char* name) {
   GBIRCSocket* self = (GBIRCSocket*) t_malloc(sizeof(GBIRCSocket));
@@ -46,6 +50,9 @@ GBIRCSocket* gb_ircsocket_new(char* name) {
   memset(&self->running_mtx, 0, sizeof(self->running_mtx));
   pthread_mutex_init(&self->running_mtx, NULL);
   
+  self->queue = t_list_new();
+  memset(&self->queue_mtx, 0, sizeof(self->queue_mtx));
+  pthread_mutex_init(&self->queue_mtx, NULL);
   self->last_write = 0;
   
   tl_important(self->l, "Hello, IRC!");
@@ -86,22 +93,48 @@ void gb_ircsocket_dump(GBIRCSocket* self) {
   t_unref(self);
 }
 
-void gb_ircsocket_connect(GBIRCSocket* self) {
+static void gb_ircsocket_write_(GBIRCSocket* self, char* msg) {
   assert(self != NULL);
   t_ref(self);
   
-  //struct addrinfo hints, *res;
-  //memset(&hints, 0, sizeof(hints));
-  //hints.ai_family   = AF_INET;
-  //hints.ai_socktype = SOCK_STREAM;
+  size_t l = strlen(msg);
+  write(self->fd, msg, l);
+  msg[l-2] = '\0';
+  tl_io(self->l, "W> %s", msg);
   
-  //int ret;
-  //char* p;
-  //asprintf(&p, "%d", self->port);
-  //if ((ret = getaddrinfo(self->host, p, &hints, &res))) {
-    
-  //}
-  //free(p);
+  t_unref(self);
+}
+
+static void gb_ircsocket_authenticate(GBIRCSocket* self) {
+  assert(self != NULL);
+  assert(self->nick != NULL);
+  assert(self->user != NULL);
+  assert(self->rnam != NULL);
+  t_ref(self);
+  
+  if (self->pass != NULL) {
+    char* pmsg;
+    asprintf(&pmsg, "PASS %s\r\n", self->pass);
+    gb_ircsocket_write_(self, pmsg);
+    t_free(pmsg);
+  }
+  
+  char* nmsg;
+  asprintf(&nmsg, "NICK %s\r\n", self->nick);
+  gb_ircsocket_write_(self, nmsg);
+  t_free(nmsg);
+  
+  char* umsg;
+  asprintf(&umsg, "USER %s 0 * :%s\r\n", self->user, self->rnam);
+  gb_ircsocket_write_(self, umsg);
+  t_free(umsg);
+  
+  t_unref(self);
+}
+
+void gb_ircsocket_connect(GBIRCSocket* self) {
+  assert(self != NULL);
+  t_ref(self);
   
   struct addrinfo hints, *res;
   memset(&hints, 0, sizeof(hints));
@@ -146,6 +179,7 @@ void gb_ircsocket_connect(GBIRCSocket* self) {
   gb_event_fire(e);
   t_unref(e);
 
+  gb_ircsocket_authenticate(self);
   gb_ircsocket_io_loop(self);
   
   t_unref(self);
@@ -155,26 +189,49 @@ static char* gb_ircsocket_read_line(GBIRCSocket* self, TError** err) {
   assert(self != NULL);
   t_ref(self);
 
-  // check if there's data
-  // set err and return NULL on error
-  // return NULL if there's no data
-  // read data
-  // set err and return NULL on error
-  // return data
+  struct timeval tv = {
+    .tv_sec = 0,
+    .tv_usec = 10000
+  };
+  
+  fd_set readfds;
+  FD_ZERO(&readfds);
+  FD_SET(self->fd, &readfds);
+  
+  int ret = select(self->fd+1, &readfds, NULL, NULL, &tv);
+  if (ret == -1) {
+    *err = t_error_new("unable to read from the socket", false);
+    t_unref(self);
+    return NULL;
+  } else if (!ret) {
+    return NULL;
+  }
+  
+  char* data = calloc(513, sizeof(char));
+  int i = 0;
+  while (i <= 512) {
+    int ok = read(self->fd, &data[i], 1);
+    if (ok < 1) {
+      *err = t_error_new("unable to read from the socket", false);
+      t_free(data);
+      t_unref(self);
+      return NULL;
+    }
+    if (i > 0 && data[i-1] == '\r' && data[i] == '\n') {
+      break;
+    }
+    if (i == 512) {
+      tl_warning(self->l, "I've read too long line!");
+      t_free(data);
+      t_unref(self);
+      return NULL;
+    }
+    ++i;
+  }
+  data[strlen(data)-2] = '\0';
   
   t_unref(self);
-  return NULL;
-}
-
-static void __attribute__((used)) gb_ircsocket_write_line(GBIRCSocket* self, char* data, TError** err) {
-  assert(self != NULL);
-  assert(data != NULL);
-  t_ref(self);
-  
-  // try writing data to the socket
-  // set err and return on error
-  
-  t_unref(self);
+  return data;
 }
 
 void gb_ircsocket_io_loop(GBIRCSocket* self) {
@@ -182,7 +239,7 @@ void gb_ircsocket_io_loop(GBIRCSocket* self) {
   t_ref(self);
   
   while (self->running) {
-    // sleep a bit
+    usleep(100);
     
     TError* err;
     
@@ -196,18 +253,98 @@ void gb_ircsocket_io_loop(GBIRCSocket* self) {
       break;
     }
     if (l == NULL) goto l_write;
-    // emit an event
+    GBEvent* e = gb_event_message_new(self, l);
+    gb_event_fire(e);
+    t_unref(e);
+    t_free(l);
     
+    struct timeval ctimev;
   l_write:
-    err = NULL;
-    // check if cooldown has been passed
-    // continue to reading if it has not
-    // check if socket is writable
-    // continue to reading if it's not
-    // try getting a line from the queue
-    // continue to reading if there's no data
-    // try writing a line
-    // stop the loop on error
+    gettimeofday(&ctimev, NULL);
+    long long ctime = (ctimev.tv_sec * 1000) + (ctimev.tv_usec / 1000);
+    if (self->last_write == 0 || ctime - self->last_write >= 700) {
+      struct timeval tv = {
+        .tv_sec = 0,
+        .tv_usec = 10000
+      };
+      
+      fd_set writefds;
+      FD_ZERO(&writefds);
+      FD_SET(self->fd, &writefds);
+      
+      int ret = select(self->fd+1, NULL, &writefds, NULL, &tv);
+      if (ret == -1) {
+        tl_error(self->l, "unable to write to the socket");
+        GBEvent* e = gb_event_disconnect_new(self);
+        gb_event_fire(e);
+        t_unref(e);
+        break;
+      } else if (!ret) {
+        continue;
+      }
+      
+      pthread_mutex_lock(&self->queue_mtx);
+      TListNode* msgn = t_list_first(self->queue);
+      if (msgn != NULL) {
+        t_list_remove(self->queue, msgn);
+        pthread_mutex_unlock(&self->queue_mtx);
+        if (write(self->fd, (char*) msgn->unit->obj, strlen(msgn->unit->obj)) == -1) {
+          tl_error(self->l, "unable to write to the socket");
+          GBEvent* e = gb_event_disconnect_new(self);
+          gb_event_fire(e);
+          t_unref(e);
+          break;
+        }
+        ((char*) msgn->unit->obj)[strlen((char*) msgn->unit->obj)-2] = '\0';
+        tl_io(self->l, "W> %s", (char*) msgn->unit->obj);
+        t_unref(msgn);
+        self->last_write = ctime;
+      } else {
+        pthread_mutex_unlock(&self->queue_mtx);
+        continue;
+      }
+    } else {
+      continue;
+    }
+  }
+  
+  t_unref(self);
+}
+
+
+/*
+ * User API
+ */
+
+
+void gb_ircsocket_write(GBIRCSocket* self, char* fmt, ...) {
+  assert(self != NULL);
+  t_ref(self);
+  
+  va_list args;
+  va_start(args, fmt);
+  char* msg;
+  vasprintf(&msg, fmt, args);
+  va_end(args);
+  
+  pthread_mutex_lock(&self->queue_mtx);
+  TGCUnit* u = t_gcunit_new_(msg, t_free);
+  t_unref(t_list_append_(self->queue, u));
+  t_unref(u);
+  pthread_mutex_unlock(&self->queue_mtx);
+  
+  t_unref(self);
+}
+
+void gb_ircsocket_join(GBIRCSocket* self, char* chan, char* pass) {
+  assert(self != NULL);
+  assert(chan != NULL);
+  t_ref(self);
+  
+  if (pass != NULL) {
+    gb_ircsocket_write(self, "JOIN %s %s\r\n", chan, pass);
+  } else {
+    gb_ircsocket_write(self, "JOIN %s\r\n", chan);
   }
   
   t_unref(self);

@@ -26,6 +26,8 @@ typedef struct GBIRCSocket {
   bool running;
   pthread_mutex_t running_mtx;
   
+  TList* queue;
+  pthread_mutex_t queue_mtx;
   long long last_write;
 } GBIRCSocket;
 
@@ -36,3 +38,6 @@ void gb_ircsocket_dump(GBIRCSocket* self);
 
 void gb_ircsocket_connect(GBIRCSocket* self);
 void gb_ircsocket_io_loop(GBIRCSocket* self);
+
+void gb_ircsocket_write(GBIRCSocket* self, char* fmt, ...);
+void gb_ircsocket_join(GBIRCSocket* self, char* chan, char* pass);

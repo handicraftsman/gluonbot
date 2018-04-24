@@ -226,6 +226,8 @@ void gb_bot_connect() {
   t_list_foreach(GBBot.sockets->pairs, n) {
     TMapPair* p = n->unit->obj;
     GBIRCSocket* sock = p->unit->obj;
-    gb_ircsocket_connect(sock);
+    pthread_t thr;
+    pthread_create(&thr, NULL, (void*(*)(void*)) gb_ircsocket_connect, sock);
+    pthread_detach(thr);
   }
 }

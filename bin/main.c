@@ -55,6 +55,8 @@ static void sighandler(int _) {
 }
 
 int main(int argc, char** argv) {
+  tl_level_chars[TLLevel_IO] = "IRC";
+  
   int opt;
 
   static struct option long_options[] = {

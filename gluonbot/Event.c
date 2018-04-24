@@ -12,7 +12,7 @@
 static void* gb_event_handle(GBEvent* e) {
   assert(e != NULL);
   
-  e->vtable->handle(e);
+  e->handle(e);
   
   t_unref(e);
   return NULL;
@@ -21,7 +21,7 @@ static void* gb_event_handle(GBEvent* e) {
 void gb_event_fire(GBEvent* e) {
   assert(e != NULL);
   t_ref(e);
-    
+  
   pthread_t thr;
   if (pthread_create(&thr, NULL, (void*(*)(void*)) gb_event_handle, e) != 0) {
     perror("gb_event_fire{pthread_create}");
