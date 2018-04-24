@@ -48,7 +48,7 @@ file(GLOB gb_core_SRC core/*.c)
 add_library(gb-core SHARED ${gb_core_SRC})
 target_link_libraries(gb-core libgluonbot)
 
-file(GLOB gb_chanop_SRC core/*.c)
+file(GLOB gb_chanop_SRC chanop/*.c)
 add_library(gb-chanop SHARED ${gb_chanop_SRC})
 target_link_libraries(gb-chanop libgluonbot)
 

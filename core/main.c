@@ -3,10 +3,10 @@
 
 #include <tiny-log.h>
 
-void gb_init() {
-  tl_info(gb_self->l, "Hello, World!");
-}
+void test_handler(GBEventConnect* e) {
+  tl_important(gb_self->l, "Hello, World! (%s)", e->sock->name);
+};
 
-void gb_deinit() {
-  tl_info(gb_self->l, "Bye, World!");
+void gb_init() {
+  gb_register_handler(GBEventType_CONNECT, test_handler);
 }

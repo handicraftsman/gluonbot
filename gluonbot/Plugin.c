@@ -28,7 +28,7 @@ GBPlugin* gb_plugin_new(char* name) {
   self->l = (char*) malloc(strlen(self->name) + 2);
   sprintf(self->l, "?%s", self->name);
   
-  memset(self->handlers, 0, (sizeof(GBEventHandleFunc) * _GBEventType_SIZE));
+  memset(self->handlers, 0, (sizeof(GBEventHandleFunc) * _GBEventType_SIZE) - 1);
   
   char* plugin_paths[] = {
     "./libgb-%s.so",
@@ -44,6 +44,7 @@ GBPlugin* gb_plugin_new(char* name) {
     asprintf(&p, plugin_paths[i], self->name);
     if (access(p, F_OK) != -1) {
       path = p;
+      break;
     } else {
       free(p);
     }
@@ -56,7 +57,7 @@ GBPlugin* gb_plugin_new(char* name) {
   
   char* error;
   
-  self->handle = dlopen(path, RTLD_NOW | RTLD_LOCAL);
+  self->handle = dlopen(path, RTLD_LAZY);
   if ((error = dlerror()) != NULL) {
     tl_critical(self->l, "Unable to load myself: %s", error);
     exit(1);
@@ -79,7 +80,7 @@ GBPlugin* gb_plugin_new(char* name) {
   
   free(path);
   
-  return self;
+  return self;  
 }
 
 void gb_plugin_destroy(GBPlugin* self) {
