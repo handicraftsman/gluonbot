@@ -55,6 +55,8 @@ GBIRCSocket* gb_ircsocket_new(char* name) {
   pthread_mutex_init(&self->queue_mtx, NULL);
   self->last_write = 0;
   
+  self->user_cache = gb_user_cache_new();
+  
   tl_important(self->l, "Hello, IRC!");
   
   return self;

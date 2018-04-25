@@ -1,5 +1,7 @@
 #pragma once
 
+#include "UserCache.h"
+
 #include <stdbool.h>
 
 #include <pthread.h>
@@ -29,6 +31,8 @@ typedef struct GBIRCSocket {
   TList* queue;
   pthread_mutex_t queue_mtx;
   long long last_write;
+  
+  GBUserCache* user_cache;
 } GBIRCSocket;
 
 GBIRCSocket* gb_ircsocket_new(char* name);

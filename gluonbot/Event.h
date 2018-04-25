@@ -13,6 +13,8 @@ typedef enum GBEventType {
   GBEventType_MESSAGE,
   GBEventType_CODE,
   GBEventType_PING,
+  GBEventType_JOIN,
+  GBEventType_PART,
   _GBEventType_SIZE
 } GBEventType;
 

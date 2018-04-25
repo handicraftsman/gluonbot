@@ -6,3 +6,4 @@
 #include "MessageEvent.h"
 #include "CodeEvent.h"
 #include "PingEvent.h"
+#include "JoinEvent.h"

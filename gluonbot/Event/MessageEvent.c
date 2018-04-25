@@ -19,6 +19,7 @@
 
 static pcre2_code* rgx_code;
 static pcre2_code* rgx_ping;
+static pcre2_code* rgx_join;
 
 static void init_regexes() {
   static bool done = false;
@@ -27,6 +28,7 @@ static void init_regexes() {
   
   rgx_code = new_regex("^:.+? (\\d\\d\\d) .+? (.+)$");
   rgx_ping = new_regex("^PING :(.+)$");
+  rgx_join = new_regex("^:(.+?)!(.+?)@(.+?) JOIN (.+)$");
 }
 
 /*
@@ -76,17 +78,35 @@ void gb_event_message_handle(GBEventMessage* self) {
     char* cstr = get_substring(md, 1);
     char* extra = get_substring(md, 2);
     int code = atoi(cstr);
+    
     GBEvent* e = gb_event_code_new(self->sock, code, extra);
     gb_event_fire(e);
     t_unref(e);
+    
     pcre2_substring_free((PCRE2_UCHAR8*) cstr);
     pcre2_substring_free((PCRE2_UCHAR8*) extra);
   } else if (try_match(rgx_ping, self->msg, &md)) {
     char* target = get_substring(md, 1);
+    
     GBEvent* e = gb_event_ping_new(self->sock, target);
     gb_event_fire(e);
     t_unref(e);
+    
     pcre2_substring_free((PCRE2_UCHAR8*) target);
+  } else if (try_match(rgx_join, self->msg, &md)) {
+    char* nick = get_substring(md, 1);
+    char* user = get_substring(md, 2);
+    char* host = get_substring(md, 3);
+    char* chan = get_substring(md, 4);
+    
+    GBEvent* e = gb_event_join_new(self->sock, nick, user, host, chan);
+    gb_event_fire(e);
+    t_unref(e);
+    
+    pcre2_substring_free((PCRE2_UCHAR8*) nick);
+    pcre2_substring_free((PCRE2_UCHAR8*) user);
+    pcre2_substring_free((PCRE2_UCHAR8*) host);
+    pcre2_substring_free((PCRE2_UCHAR8*) chan);
   }
   
   if (md != NULL) pcre2_match_data_free(md);

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "../Event.h"
 #include "../IRCSocket.h"
 
 /// \addtogroup Events

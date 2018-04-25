@@ -1,5 +1,7 @@
 #pragma once
 
+#include "../Event.h"
+
 /// \addtogroup Events
 /// @{
 typedef struct GBEventTest {
