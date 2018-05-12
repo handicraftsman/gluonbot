@@ -21,8 +21,9 @@ typedef struct GBUserInfo {
   char* host;
 } GBUserInfo;
 
-GBUserCache* gb_user_cache_new();
-void gb_user_cache_destroy(GBUserCache* self);
+GBUserCache* gb_user_cache_new(); ///< \private
+void gb_user_cache_destroy(GBUserCache* self); ///< \private
 GBUserInfo* gb_user_cache_get(GBUserCache* self, char* nick);
+GBUserInfo* gb_user_cache_rename(GBUserCache* self, char* nick, char* new_nick);
 
 /// @}

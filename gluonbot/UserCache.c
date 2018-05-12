@@ -55,6 +55,22 @@ GBUserInfo* gb_user_cache_get(GBUserCache* self, char* nick) {
   }
 }
 
+GBUserInfo* gb_user_cache_rename(GBUserCache* self, char* nick, char* new_nick) {
+  assert(self != NULL);
+  t_ref(self);
+  
+  GBUserInfo* info = gb_user_cache_get(self, nick);
+  pthread_mutex_lock(&info->mtx);
+  t_free(info->nick);
+  info->nick = strdup(new_nick);
+  t_unref(t_map_rename(self->info, nick, new_nick));
+  pthread_mutex_unlock(&info->mtx);
+  
+  t_unref(self);
+  return info;
+}
+
+
 /*
  * User Info
  */

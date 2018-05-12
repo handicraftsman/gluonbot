@@ -351,3 +351,15 @@ void gb_ircsocket_join(GBIRCSocket* self, char* chan, char* pass) {
   
   t_unref(self);
 }
+
+void gb_ircsocket_privmsg(GBIRCSocket* self, char* target, char* msg) {
+  assert(self   != NULL);
+  assert(target != NULL);
+  assert(msg    != NULL);
+  t_ref(self);
+  
+  gb_ircsocket_write(self, "PRIVMSG %s :%s\r\n", target, msg);
+  
+  t_unref(self);
+}
+

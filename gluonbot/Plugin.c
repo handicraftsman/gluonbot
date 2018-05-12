@@ -29,6 +29,7 @@ GBPlugin* gb_plugin_new(char* name) {
   sprintf(self->l, "?%s", self->name);
   
   memset(self->handlers, 0, (sizeof(GBEventHandleFunc) * _GBEventType_SIZE) - 1);
+  self->commands = t_map_new();
   
   char* plugin_paths[] = {
     "./libgb-%s.so",
@@ -86,6 +87,8 @@ GBPlugin* gb_plugin_new(char* name) {
 void gb_plugin_destroy(GBPlugin* self) {
   assert(self != NULL);
   
+  t_unref(self->commands);
+  
   char* error;
     
   GBSetupFunc deinit = (GBSetupFunc) dlsym(self->handle, "gb_deinit");
@@ -107,3 +110,16 @@ void gb_plugin_register_handler(GBPlugin* self, GBEventType type, GBEventHandleF
   
   t_unref(self);
 }
+
+void gb_plugin_register_command(GBPlugin* self, GBCommand* cmd) {
+  assert(self != NULL);
+  assert(cmd != NULL);
+  t_ref(self);
+  t_ref(cmd);
+  
+  t_unref(t_map_set_(self->commands, cmd->name, cmd));
+  
+  t_unref(cmd);  
+  t_unref(self);
+}
+

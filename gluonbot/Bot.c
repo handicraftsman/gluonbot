@@ -4,6 +4,7 @@
 #include "IRCSocket.h"
 #include "Plugin.h"
 
+#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -25,6 +26,7 @@ void gb_bot_init() {
   GBBot.plugins = t_map_new();
   
   GBBot.prefix = strdup("!");
+  GBBot.db_path = strdup("./gluonbot.db");
   
   GBPlugin* p = gb_plugin_new("core");
   t_unref(t_map_set_(GBBot.plugins, "core", p));
@@ -36,6 +38,8 @@ void gb_bot_deinit() {
   t_unref(GBBot.plugins);
   
   t_free(GBBot.prefix);
+  if (GBBot.db_path != NULL) t_free(GBBot.db_path);
+  if (GBBot.database != NULL) sqlite3_close(GBBot.database);
 }
 
 
@@ -188,6 +192,10 @@ void gb_bot_load_config(char* config_path) {
       GBBot.prefix = strdup(p);
       tl_debug(l, "prefix <- %s", GBBot.prefix); 
       xmlFree(p);      
+    } else if (strcmp((char*) attr->name, "db-path") == 0) {
+      char* p = (char*) xmlNodeListGetString(root->doc, attr->children, 1);
+      GBBot.db_path = strdup(p);
+      xmlFree(p);
     }
   }
   
@@ -222,6 +230,35 @@ void gb_bot_load_config(char* config_path) {
   xmlCleanupParser();
 }
 
+void gb_bot_load_database() {
+  sqlite3_open(GBBot.db_path, &GBBot.database);
+  if (!GBBot.database) {
+    const char* emsg = sqlite3_errmsg(GBBot.database);
+    tl_error(l, "%s", emsg);
+    exit(1);
+  }
+  
+  char* emsg = NULL;
+  
+  sqlite3_exec(
+    GBBot.database, 
+    "CREATE TABLE IF NOT EXISTS flags ("
+      "server VARCHAR(64) NOT NULL, "
+      "channel VARCHAR(64), "
+      "host VARCHAR(64), "
+      "plugin VARCHAR(64), "
+      "name VARCHAR(64)"
+    ");",
+    NULL,
+    NULL,
+    &emsg
+  );
+  if (emsg) {
+    tl_error(l, "%s", emsg);
+    exit(1);
+  }
+}
+
 void gb_bot_connect() {
   t_list_foreach(GBBot.sockets->pairs, n) {
     TMapPair* p = n->unit->obj;
@@ -229,5 +266,139 @@ void gb_bot_connect() {
     pthread_t thr;
     pthread_create(&thr, NULL, (void*(*)(void*)) gb_ircsocket_connect, sock);
     pthread_detach(thr);
+  }
+}
+
+
+GBFlag* gb_flag_new() {
+  GBFlag* self = (GBFlag*) t_malloc(sizeof(GBFlag));
+  if (!self) {
+    perror("gb_flag_new");
+    exit(1);
+  }
+  
+  t_gcunit(self) = t_gcunit_new_(self, gb_flag_destroy);
+  self->server  = NULL;
+  self->channel = NULL;
+  self->host    = NULL;
+  self->plugin  = NULL;
+  self->name    = NULL;
+  
+  return self;
+}
+
+void gb_flag_destroy(GBFlag* self) {
+  assert(self != NULL);
+  if (self->server != NULL)  t_free(self->server);
+  if (self->channel != NULL) t_free(self->channel);
+  if (self->host != NULL)    t_free(self->host);
+  if (self->plugin != NULL)  t_free(self->plugin);
+  if (self->name != NULL)    t_free(self->name);
+}
+
+
+bool gb_flag_is_set(GBFlag* self) {
+  assert(self->server != NULL);
+  assert(self->channel != NULL);
+  assert(self->host != NULL);
+  assert(self->plugin != NULL);
+  assert(self->name != NULL);
+  
+  sqlite3_stmt* stmt;
+  if (sqlite3_prepare(
+    GBBot.database,
+    "SELECT "
+      "EXISTS(SELECT name FROM flags WHERE server=? AND channel=? AND host=? AND plugin=? AND name=? LIMIT 1) "
+    "OR "
+      "EXISTS(SELECT name FROM flags WHERE server=? AND channel=? AND plugin=? AND name=? AND host IS NULL LIMIT 1) "
+    "OR "
+      "EXISTS(SELECT name FROM flags WHERE server=? AND host=? AND plugin=? AND name=? AND channel IS NULL LIMIT 1) "
+    "OR "
+      "EXISTS(SELECT name FROM flags WHERE server=? AND plugin=? AND name=? AND NOT channel IS NULL AND host IS NULL LIMIT 1) "
+    "OR "
+  
+      "EXISTS(SELECT name FROM flags WHERE server=? AND channel=? AND host=? AND plugin=? AND name IS NULL LIMIT 1) "
+    "OR "
+      "EXISTS(SELECT name FROM flags WHERE server=? AND channel=? AND plugin=? AND host IS NULL AND name IS NULL LIMIT 1) "
+    "OR "
+      "EXISTS(SELECT name FROM flags WHERE server=? AND host=? AND plugin=? AND channel IS NULL AND name IS NULL LIMIT 1) "
+    "OR "
+      "EXISTS(SELECT name FROM flags WHERE server=? AND plugin=? AND channel IS NULL AND host IS NULL AND name IS NULL LIMIT 1) "
+    "OR "
+  
+      "EXISTS(SELECT name FROM flags WHERE server=? AND channel=? AND host=? AND plugin IS NULL AND name IS NULL LIMIT 1) "
+    "OR "
+      "EXISTS(SELECT name FROM flags WHERE server=? AND channel=? AND host IS NULL AND plugin IS NULL AND name IS NULL LIMIT 1) "
+    "OR "
+      "EXISTS(SELECT name FROM flags WHERE server=? AND host=? AND channel IS NULL AND plugin IS NULL AND name IS NULL LIMIT 1) "
+    "OR "
+      "EXISTS(SELECT name FROM flags WHERE server=? AND channel IS NULL AND host IS NULL AND plugin IS NULL AND name IS NULL LIMIT 1);"
+    ,
+    -1,
+    &stmt,
+    NULL
+  ) != SQLITE_OK) {
+    tl_error(l, "%s", sqlite3_errmsg(GBBot.database));
+    return false;
+  }
+  
+  sqlite3_bind_text(stmt, 1, self->server, -1, SQLITE_TRANSIENT);
+  sqlite3_bind_text(stmt, 2, self->channel, -1, SQLITE_TRANSIENT);
+  sqlite3_bind_text(stmt, 3, self->host, -1, SQLITE_TRANSIENT);
+  sqlite3_bind_text(stmt, 4, self->plugin, -1, SQLITE_TRANSIENT);
+  sqlite3_bind_text(stmt, 5, self->name, -1, SQLITE_TRANSIENT);
+  
+  sqlite3_bind_text(stmt, 6, self->server, -1, SQLITE_TRANSIENT);
+  sqlite3_bind_text(stmt, 7, self->channel, -1, SQLITE_TRANSIENT);
+  sqlite3_bind_text(stmt, 8, self->plugin, -1, SQLITE_TRANSIENT);
+  sqlite3_bind_text(stmt, 9, self->name, -1, SQLITE_TRANSIENT);
+
+  sqlite3_bind_text(stmt, 10, self->server, -1, SQLITE_TRANSIENT);
+  sqlite3_bind_text(stmt, 11, self->host, -1, SQLITE_TRANSIENT);
+  sqlite3_bind_text(stmt, 12, self->plugin, -1, SQLITE_TRANSIENT);
+  sqlite3_bind_text(stmt, 13, self->name, -1, SQLITE_TRANSIENT);
+  
+  sqlite3_bind_text(stmt, 14, self->server, -1, SQLITE_TRANSIENT);
+  sqlite3_bind_text(stmt, 15, self->plugin, -1, SQLITE_TRANSIENT);
+  sqlite3_bind_text(stmt, 16, self->name, -1, SQLITE_TRANSIENT);
+  
+  
+  sqlite3_bind_text(stmt, 17, self->server, -1, SQLITE_TRANSIENT);
+  sqlite3_bind_text(stmt, 18, self->channel, -1, SQLITE_TRANSIENT);
+  sqlite3_bind_text(stmt, 19, self->host, -1, SQLITE_TRANSIENT);
+  sqlite3_bind_text(stmt, 20, self->plugin, -1, SQLITE_TRANSIENT);
+  
+  sqlite3_bind_text(stmt, 21, self->server, -1, SQLITE_TRANSIENT);
+  sqlite3_bind_text(stmt, 22, self->channel, -1, SQLITE_TRANSIENT);
+  sqlite3_bind_text(stmt, 23, self->plugin, -1, SQLITE_TRANSIENT);
+    
+  sqlite3_bind_text(stmt, 24, self->server, -1, SQLITE_TRANSIENT);
+  sqlite3_bind_text(stmt, 25, self->host, -1, SQLITE_TRANSIENT);
+  sqlite3_bind_text(stmt, 26, self->plugin, -1, SQLITE_TRANSIENT);
+  
+  sqlite3_bind_text(stmt, 27, self->server, -1, SQLITE_TRANSIENT);
+  sqlite3_bind_text(stmt, 28, self->plugin, -1, SQLITE_TRANSIENT);
+
+
+  sqlite3_bind_text(stmt, 29, self->server, -1, SQLITE_TRANSIENT);
+  sqlite3_bind_text(stmt, 30, self->channel, -1, SQLITE_TRANSIENT);
+  sqlite3_bind_text(stmt, 31, self->host, -1, SQLITE_TRANSIENT);
+  
+  sqlite3_bind_text(stmt, 32, self->server, -1, SQLITE_TRANSIENT);
+  sqlite3_bind_text(stmt, 33, self->channel, -1, SQLITE_TRANSIENT);
+    
+  sqlite3_bind_text(stmt, 34, self->server, -1, SQLITE_TRANSIENT);
+  sqlite3_bind_text(stmt, 35, self->host, -1, SQLITE_TRANSIENT);
+  
+  sqlite3_bind_text(stmt, 36, self->server, -1, SQLITE_TRANSIENT);
+  
+  int r = sqlite3_step(stmt);
+  if (r == SQLITE_ROW) {
+    int out = sqlite3_column_int(stmt, 0);
+    sqlite3_finalize(stmt);
+    return (bool) out;
+  } else {
+    sqlite3_finalize(stmt);
+    return false;
   }
 }

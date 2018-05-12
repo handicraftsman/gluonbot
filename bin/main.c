@@ -90,7 +90,8 @@ int main(int argc, char** argv) {
   
   gb_bot_init();
   gb_bot_load_config(config_file);
-
+  gb_bot_load_database();
+  
   signal(SIGTERM, sighandler);
   signal(SIGINT, sighandler);
   signal(SIGHUP, sighandler);

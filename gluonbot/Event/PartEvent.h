@@ -4,7 +4,7 @@
 
 /// \addtogroup Events
 /// @{
-typedef struct GBEventJoin {
+typedef struct GBEventPart {
   GBEvent _parent;
   
   GBIRCSocket* sock;
@@ -12,8 +12,10 @@ typedef struct GBEventJoin {
   char* user;
   char* host;
   char* chan;
-} GBEventJoin;
+  char* reason;
+} GBEventPart;
 
-GBEvent* gb_event_join_new(GBIRCSocket* sock, char* nick, char* user, char* host, char* chan);
+GBEvent* gb_event_part_new(GBIRCSocket* sock, char* nick, char* user, char* host, char* chan, char* reason);
 /// @}
+
 

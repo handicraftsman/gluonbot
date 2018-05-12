@@ -20,7 +20,7 @@ static void init_regexes() {
   if (done) return;
   done = true;
   
-  rgx_whoreply = new_regex("^.+? (.+?) (.+?) .+? (.+?) .*");
+  rgx_whoreply = new_regex("^.+? (.+?) (.+?) .+? (.+?) .*$");
 }
 
 static void gb_event_code_destroy(GBEventCode* self);
