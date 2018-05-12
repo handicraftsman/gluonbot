@@ -15,6 +15,10 @@ typedef struct GBCommand {
   int cooldown;
   char* flag;
   GBCommandHandler handler;
+  
+  // map    -> map     -> long long
+  // server -> channel -> host
+  TMap* cooldowns;
 } GBCommand;
 
 typedef struct GBCommandInfo {

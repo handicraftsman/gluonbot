@@ -28,6 +28,7 @@ GBCommand* gb_command_new(GBCommandInfo info) {
   self->cooldown = info.cooldown;
   self->flag = info.flag == NULL ? strdup("unbound") : strdup(info.flag);
   self->handler = info.handler;
+  self->cooldowns = t_map_new();
   
   return self;
 }

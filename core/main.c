@@ -18,6 +18,7 @@ void gb_init() {
   cmd_ping = gb_command_new((GBCommandInfo) {
     .name = "ping",
     .flag = "ping",
+    .cooldown = 10,
     .handler = (GBCommandHandler) cmd_ping_handler
   });
   gb_register_command(cmd_ping);
