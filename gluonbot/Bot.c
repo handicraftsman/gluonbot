@@ -1,3 +1,5 @@
+#define _GNU_SOURCE
+
 #include "Bot.h"
 #include "Bot.h"
 #include "ChannelDesc.h"
@@ -274,16 +276,6 @@ void gb_bot_connect() {
   t_list_foreach(GBBot.sockets->pairs, n) {
     TMapPair* p = n->unit->obj;
     GBIRCSocket* sock = p->unit->obj;
-    
-    GBFlag* filter = gb_flag_new();
-    filter->server = strdup(sock->name);
-    TList* list = gb_flag_list(filter);
-    t_list_foreach(list, flagn) {
-      GBFlag* flag = flagn->unit->obj;
-      printf("%s %s %s %s %s\n", flag->server, flag->channel, flag->host, flag->plugin, flag->name);
-    }
-    t_unref(list);
-    
     pthread_t thr;
     pthread_create(&thr, NULL, (void*(*)(void*)) gb_ircsocket_connect, sock);
     pthread_detach(thr);
@@ -542,4 +534,167 @@ TList* gb_flag_list(GBFlag* filter) {
   
   t_unref(filter);
   return flags;
+}
+
+void gb_flag_remove(GBFlag* filter) {
+  assert(filter != NULL);
+  assert(filter->server != NULL);
+  t_ref(filter);
+  
+  char* channelp;
+  char* hostp;
+  char* pluginp;
+  char* namep;
+  
+  if (filter->channel) {
+    asprintf(&channelp, " AND channel=:channel");
+  } else {
+    channelp = strdup("");
+  }
+  
+  if (filter->host) {
+    asprintf(&hostp, " AND host=:host");
+  } else {
+    hostp = strdup("");
+  }
+  
+  if (filter->plugin) {
+    asprintf(&pluginp, " AND plugin=:plugin");
+  } else {
+    pluginp = strdup("");
+  }
+  
+  if (filter->name) {
+    asprintf(&namep, " AND name=:name");
+  } else {
+    namep = strdup("");
+  }
+  
+  char* req;
+  asprintf(&req, "DELETE FROM flags WHERE server=:server%s%s%s%s;", channelp, hostp, pluginp, namep);
+  
+  sqlite3_stmt* stmt;
+  if (sqlite3_prepare(
+    GBBot.database,
+    req,
+    -1,
+    &stmt,
+    NULL
+  ) != SQLITE_OK) {
+    tl_error(l, "%s", sqlite3_errmsg(GBBot.database));
+    goto gb_flag_remove_dealloc;
+  }
+  
+  int channeln, hostn, pluginn, namen;
+  channeln = sqlite3_bind_parameter_index(stmt, "channel");
+  hostn    = sqlite3_bind_parameter_index(stmt, "host");
+  pluginn  = sqlite3_bind_parameter_index(stmt, "plugin");
+  namen    = sqlite3_bind_parameter_index(stmt, "name");
+  
+  if (channeln && filter->channel) sqlite3_bind_text(stmt, channeln, filter->channel, -1, SQLITE_TRANSIENT);
+  if (hostn && filter->host)       sqlite3_bind_text(stmt, hostn, filter->host, -1, SQLITE_TRANSIENT);
+  if (pluginn && filter->plugin)   sqlite3_bind_text(stmt, pluginn, filter->plugin, -1, SQLITE_TRANSIENT);
+  if (namen && filter->name)       sqlite3_bind_text(stmt, namen, filter->name, -1, SQLITE_TRANSIENT);
+  
+  sqlite3_step(stmt);
+    
+gb_flag_remove_dealloc:
+  t_free(channelp);
+  t_free(hostp);
+  t_free(pluginp);
+  t_free(namep);
+  t_free(req);
+  
+  t_unref(filter);
+}
+
+void gb_flag_insert(GBFlag* filter) {
+  assert(filter != NULL);
+  assert(filter->server != NULL);
+  t_ref(filter);
+  
+  char* channelp1;
+  char* channelp2;
+  
+  char* hostp1;
+  char* hostp2;
+  
+  char* pluginp1;
+  char* pluginp2;
+  
+  char* namep1;
+  char* namep2;
+  
+  if (filter->channel) {
+    asprintf(&channelp1, ",channel");
+    asprintf(&channelp2, ",:channel");
+  } else {
+    channelp1 = strdup("");
+    channelp2 = strdup("");
+  }
+  
+  if (filter->host) {
+    asprintf(&hostp1, ",host");
+    asprintf(&hostp2, ",:host");
+  } else {
+    hostp1 = strdup("");
+    hostp2 = strdup("");
+  }
+  
+  if (filter->plugin) {
+    asprintf(&pluginp1, ",plugin");
+    asprintf(&pluginp2, ",:plugin");
+  } else {
+    pluginp1 = strdup("");
+    pluginp2 = strdup("");
+  }
+  
+  if (filter->name) {
+    asprintf(&namep1, ",name");
+    asprintf(&namep2, ",:name");
+  } else {
+    namep1 = strdup("");
+    namep2 = strdup("");
+  }
+  
+  char* req;
+  asprintf(&req, "INSERT INTO flags (server%s%s%s%s) VALUES (?%s%s%s%s)", channelp1, hostp1, pluginp1, namep1, channelp2, hostp2, pluginp2, namep2);
+  
+  sqlite3_stmt* stmt;
+  if (sqlite3_prepare(
+    GBBot.database,
+    req,
+    -1,
+    &stmt,
+    NULL
+  ) != SQLITE_OK) {
+    tl_error(l, "%s", sqlite3_errmsg(GBBot.database));
+    goto gb_flag_remove_dealloc;
+  }
+  
+  int channeln, hostn, pluginn, namen;
+  channeln = sqlite3_bind_parameter_index(stmt, "channel");
+  hostn    = sqlite3_bind_parameter_index(stmt, "host");
+  pluginn  = sqlite3_bind_parameter_index(stmt, "plugin");
+  namen    = sqlite3_bind_parameter_index(stmt, "name");
+  
+  if (channeln && filter->channel) sqlite3_bind_text(stmt, channeln, filter->channel, -1, SQLITE_TRANSIENT);
+  if (hostn && filter->host)       sqlite3_bind_text(stmt, hostn, filter->host, -1, SQLITE_TRANSIENT);
+  if (pluginn && filter->plugin)   sqlite3_bind_text(stmt, pluginn, filter->plugin, -1, SQLITE_TRANSIENT);
+  if (namen && filter->name)       sqlite3_bind_text(stmt, namen, filter->name, -1, SQLITE_TRANSIENT);
+  
+  sqlite3_step(stmt);
+    
+gb_flag_remove_dealloc:
+  t_free(channelp1);
+  t_free(channelp2);
+  t_free(hostp1);
+  t_free(hostp2);
+  t_free(pluginp1);
+  t_free(pluginp2);
+  t_free(namep1);
+  t_free(namep2);
+  t_free(req);
+  
+  t_unref(filter);
 }

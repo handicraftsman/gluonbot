@@ -39,3 +39,5 @@ GBFlag* gb_flag_new();
 void gb_flag_destroy(GBFlag* self);
 bool gb_flag_is_set(GBFlag* self);
 TList* gb_flag_list(GBFlag* filter);
+void gb_flag_remove(GBFlag* filter);
+void gb_flag_insert(GBFlag* filter);

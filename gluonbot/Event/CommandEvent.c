@@ -152,7 +152,7 @@ void gb_event_command_handle(GBEventCommand* self) {
         flag->host    = strdup(self->host);
         flag->plugin  = strdup(plugin->name);
         flag->name    = strdup(command->flag);
-        if (gb_flag_is_set(flag)) {
+        if (strcmp(command->flag, "world") == 0 || gb_flag_is_set(flag)) {
           if (is_command_available(self, command)) {
             command->handler(self); 
           }

@@ -7,23 +7,23 @@ void connect_handler(GBEventConnect* e) {
   tl_important(gb_self->l, "Hello, World! (%s)", e->sock->name);
 };
 
-GBCommand* cmd_ping;
-void cmd_ping_handler(GBEventCommand* e) {
-  gb_ircsocket_reply(e, "Pong!");
+GBCommand* cmd_key;
+void cmd_key_handler(GBEventCommand* e) {
+  gb_ircsocket_reply(e, "NYI");
 }
 
 void gb_init() {
   gb_register_handler(GBEventType_CONNECT, connect_handler);
   
-  cmd_ping = gb_command_new((GBCommandInfo) {
-    .name = "ping",
-    .flag = "ping",
+  cmd_key = gb_command_new((GBCommandInfo) {
+    .name = "key",
+    .flag = "world",
     .cooldown = 10,
-    .handler = (GBCommandHandler) cmd_ping_handler
+    .handler = (GBCommandHandler) cmd_key_handler
   });
-  gb_register_command(cmd_ping);
+  gb_register_command(cmd_key);
 }
 
 void gb_deinit() {
-  t_unref(cmd_ping);
+  t_unref(cmd_key);
 }
