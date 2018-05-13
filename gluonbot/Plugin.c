@@ -13,8 +13,9 @@
 #include <tiny-log.h>
 
 typedef void (*GBSetupFunc)();
+typedef void (*GBConfigFunc)(xmlNodePtr);
 
-GBPlugin* gb_plugin_new(char* name) {
+GBPlugin* gb_plugin_new(char* name, xmlNodePtr root) {
   GBPlugin* self = (GBPlugin*) t_malloc(sizeof(GBPlugin));
   if (!self) {
     perror("gb_channeldesc_new");
@@ -77,6 +78,16 @@ GBPlugin* gb_plugin_new(char* name) {
   GBSetupFunc init = (GBSetupFunc) dlsym(self->handle, "gb_init");
   if ((error = dlerror()) == NULL) {
     init();
+  }
+  
+  GBConfigFunc configure = (GBSetupFunc) dlsym(self->handle, "gb_configure");
+  if ((error = dlerror()) == NULL) {
+    configure(root);
+  }
+  
+  GBSetupFunc postinit = (GBSetupFunc) dlsym(self->handle, "gb_postinit");
+  if ((error = dlerror()) == NULL) {
+    postinit();
   }
   
   free(path);

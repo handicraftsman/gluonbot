@@ -3,6 +3,8 @@
 #include "Event.h"
 #include "Command.h"
 
+#include <libxml/tree.h>
+
 #include <tiny.h>
 
 typedef struct GBPlugin {
@@ -17,7 +19,7 @@ typedef struct GBPlugin {
   void* handle;
 } GBPlugin;
 
-GBPlugin* gb_plugin_new(char* name);
+GBPlugin* gb_plugin_new(char* name, xmlNodePtr root);
 void gb_plugin_destroy(GBPlugin* self);
 
 void gb_plugin_register_handler(GBPlugin* self, GBEventType type, GBEventHandleFunc handler);

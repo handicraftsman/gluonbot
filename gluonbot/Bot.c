@@ -27,10 +27,6 @@ void gb_bot_init() {
   
   GBBot.prefix = strdup("!");
   GBBot.db_path = strdup("./gluonbot.db");
-  
-  GBPlugin* p = gb_plugin_new("core");
-  t_unref(t_map_set_(GBBot.plugins, "core", p));
-  t_unref(p);
 }
 
 void gb_bot_deinit() {
@@ -217,12 +213,27 @@ void gb_bot_load_config(char* config_path) {
         continue;
       }
       
-      GBPlugin* p = gb_plugin_new(name);
+      GBPlugin* p = gb_plugin_new(name, c);
       t_unref(t_map_set_(GBBot.plugins, name, p));
       t_unref(p);
       
       xmlFree(name);
     }
+  }
+  
+  bool has_core = false;
+  t_list_foreach(GBBot.plugins->pairs, pluginn) {
+    TMapPair* pluginp = pluginn->unit->obj;
+    GBPlugin* plugin = pluginp->unit->obj;
+    if (strcmp(plugin->name, "core") == 0) {
+      has_core = true;
+      t_unref(pluginn);
+      break;
+    }
+  }
+  if (!has_core) {
+    tl_error(l, "No core plugin!");
+    exit(1);
   }
   
   xmlFreeDoc(doc);
@@ -263,6 +274,16 @@ void gb_bot_connect() {
   t_list_foreach(GBBot.sockets->pairs, n) {
     TMapPair* p = n->unit->obj;
     GBIRCSocket* sock = p->unit->obj;
+    
+    GBFlag* filter = gb_flag_new();
+    filter->server = strdup(sock->name);
+    TList* list = gb_flag_list(filter);
+    t_list_foreach(list, flagn) {
+      GBFlag* flag = flagn->unit->obj;
+      printf("%s %s %s %s %s\n", flag->server, flag->channel, flag->host, flag->plugin, flag->name);
+    }
+    t_unref(list);
+    
     pthread_t thr;
     pthread_create(&thr, NULL, (void*(*)(void*)) gb_ircsocket_connect, sock);
     pthread_detach(thr);
@@ -401,4 +422,124 @@ bool gb_flag_is_set(GBFlag* self) {
     sqlite3_finalize(stmt);
     return false;
   }
+}
+
+typedef struct GBFlagListerState {
+  TList* flags;
+  GBFlag* filter;
+} GBFlagListerState;
+
+static int _gb_flag_lister(GBFlagListerState* state, int argc, char** argv, char** col_names) {
+  bool ok = true;
+  
+  char* server;
+  char* channel;
+  char* host;
+  char* plugin;
+  char* name;
+  
+  for (int i = 0; i < argc; ++i) {    
+    int serverc = strcmp(col_names[i], "server");
+    
+    if (serverc == 0 && argv[i] != NULL && state->filter->server != NULL && strcmp(argv[i], state->filter->server) != 0) {
+      ok = false;
+      break;
+    } else if (serverc == 0 && argv[i] != NULL) {
+      server = strdup(argv[i]);
+    } else if (serverc == 0) {
+      tl_error(l, "Error: flag.server is null");
+      exit(1);
+    }
+    
+    int channelc = strcmp(col_names[i], "channel");
+    if (channelc == 0 && argv[i] != NULL && state->filter->channel != NULL && strcmp(argv[i], state->filter->channel) != 0) {
+      ok = false;
+      break;
+    } else if (channelc == 0 && argv[i] != NULL) {
+      channel = strdup(argv[i]);
+    } else if (channelc == 0) {
+      channel = NULL;
+    }
+    
+    int hostc = strcmp(col_names[i], "host"); 
+    if (hostc == 0 && argv[i] != NULL && state->filter->host != NULL && strcmp(argv[i], state->filter->host) != 0) {
+      ok = false;
+      break;
+    } else if (hostc == 0 && argv[i] != NULL) {
+      host = strdup(argv[i]);
+    } else if (hostc == 0) {
+      host = NULL;
+    }
+    
+    int pluginc = strcmp(col_names[i], "plugin");
+    if (pluginc == 0 && argv[i] != NULL && state->filter->plugin != NULL && strcmp(argv[i], state->filter->plugin) != 0) {
+      ok = false;
+      break;
+    } else if (pluginc == 0 && argv[i] != NULL) {
+      plugin = strdup(argv[i]);
+    } else if (pluginc == 0) {
+      plugin = NULL;
+    }
+    
+    int namec = strcmp(col_names[i], "name");
+    if (namec == 0 && argv[i] != NULL && state->filter->name != NULL && strcmp(argv[i], state->filter->name) != 0) {
+      ok = false;
+      break;
+    } else if (namec == 0 && argv[i] != NULL) {
+      name = strdup(argv[i]);
+    } else if (namec == 0) {
+      name = NULL;
+    }
+  }
+  
+  if (ok) {
+    GBFlag* flag  = gb_flag_new();
+    flag->server  = server;
+    flag->channel = channel;
+    flag->host    = host;
+    flag->plugin  = plugin;
+    flag->name    = name;    
+    t_unref(t_list_append_(state->flags, flag));
+    t_unref(flag);
+  } else {
+    t_free(server);
+    t_free(channel);
+    t_free(host);
+    t_free(plugin);
+    t_free(name);
+  }
+  
+  return 0;
+}
+
+TList* gb_flag_list(GBFlag* filter) {
+  assert(filter != NULL);
+  assert(filter->server != NULL);
+  t_ref(filter);
+  
+  TList* flags = t_list_new();
+  
+  GBFlagListerState* state = (GBFlagListerState*) t_malloc(sizeof(GBFlagListerState));
+  if (!state) {
+    perror("gb_flag_list{t_malloc}");
+    exit(1);
+  }
+  state->flags  = flags;
+  state->filter = filter;
+  
+  char* emsg;
+  sqlite3_exec(
+    GBBot.database,
+    "SELECT * FROM flags;",
+    (int(*)(void*,int,char**,char**)) _gb_flag_lister,
+    state,
+    &emsg
+  );
+  if (emsg) {
+    tl_error(l, emsg);
+    exit(1);
+  }
+  
+  t_unref(filter);
+  return flags;
 }
