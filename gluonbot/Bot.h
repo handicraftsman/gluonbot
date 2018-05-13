@@ -6,6 +6,9 @@
 
 #include <tiny.h>
 
+/// \addtogroup Bot
+/// @{
+
 typedef struct _GBBot {
   TMap* sockets;
   TMap* plugins;
@@ -25,6 +28,10 @@ void gb_bot_load_config(char* config_path);
 void gb_bot_load_database();
 void gb_bot_connect();
 
+/// @}
+/// \addtogroup Flags
+/// @{
+
 typedef struct GBFlag {
   t_gcunit_use();
   
@@ -41,3 +48,5 @@ bool gb_flag_is_set(GBFlag* self);
 TList* gb_flag_list(GBFlag* filter);
 void gb_flag_remove(GBFlag* filter);
 void gb_flag_insert(GBFlag* filter);
+
+/// @}

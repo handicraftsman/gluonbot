@@ -15,18 +15,18 @@
 typedef struct GBIRCSocket {
   t_gcunit_use(); ///< \private
   
-  char* name; ///< \summary name of the server
-  char* l; ///< \summary name of the log
+  char* name; ///< name of the server
+  char* l; ///< name of the log
   
-  char* host; ///< \summary remote host
-  int   port; ///< \summary remote port
+  char* host; ///< remote host
+  int   port; ///< remote port
   
-  char* nick; ///< \summary our nickname
-  char* user; ///< \summary our username
-  char* pass; ///< \summary our password (nullable)
-  char* rnam; ///< \summary our realname/GECOS
+  char* nick; ///< our nickname
+  char* user; ///< our username
+  char* pass; ///< our password (nullable)
+  char* rnam; ///< our realname/GECOS
   
-  TList* autojoin; ///< \summary list of channels (GBChannelDesc*) bot should join automatically
+  TList* autojoin; ///< list of channels (GBChannelDesc*) bot should join automatically
   
   int fd; ///< \private
   bool running; ///< \private
@@ -57,16 +57,22 @@ void gb_ircsocket_write(GBIRCSocket* self, char* fmt, ...);
 /// \param pass Channel password (nullable)
 void gb_ircsocket_join(GBIRCSocket* self, char* chan, char* pass);
 
-/// \summary Parts the given channel
+/// Parts the given channel
 /// \param chan Channel to part
 /// \param reason Part reason (nullable)
 void gb_ircsocket_part(GBIRCSocket* self, char* chan, char* reason);
 
-/// \summary Sends given message to the given target
+/// Sends given message to the given target
 /// \param target Channel/user to send to
 /// \param message Message to send
 void gb_ircsocket_privmsg(GBIRCSocket* self, char* target, char* msg);
 
+/// Sends given notice to the given target
+/// \param target Channel/user to notice
+/// \param message Message to send
+void gb_ircsocket_notice(GBIRCSocket* self, char* target, char* msg);
+
 #define gb_ircsocket_reply(e, fmt, ...) gb_ircsocket_privmsg(e->sock, strcmp(e->target, e->sock->nick) == 0 ? e->nick : e->target, fmt, ##__VA_ARGS__)
+#define gb_ircsocket_nreply(e, fmt, ...) gb_ircsocket_notice(e->sock, e->nick, fmt, ##__VA_ARGS__)
 
 /// @}

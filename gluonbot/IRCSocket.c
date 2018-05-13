@@ -358,8 +358,32 @@ void gb_ircsocket_privmsg(GBIRCSocket* self, char* target, char* msg) {
   assert(msg    != NULL);
   t_ref(self);
   
-  gb_ircsocket_write(self, "PRIVMSG %s :%s\r\n", target, msg);
+  size_t len = strlen(msg);
+  
+  for (int i = 0; i < (len / 400); i++) {
+    char* m = strndup(msg+ 400 * i, 400);
+    gb_ircsocket_write(self, "PRIVMSG %s :%s\r\n", target, m);
+    t_free(m);
+  }
   
   t_unref(self);
 }
 
+void gb_ircsocket_notice(GBIRCSocket* self, char* target, char* msg) {
+  assert(self   != NULL);
+  assert(target != NULL);
+  assert(msg    != NULL);
+  t_ref(self);
+  
+  size_t len = strlen(msg);
+  size_t sz = (len / 400);
+  sz = sz == 0 ? 1 : sz;
+  
+  for (int i = 0; i < sz; i++) {
+    char* m = strndup(msg+ 400 * i, 400);
+    gb_ircsocket_write(self, "NOTICE %s :%s\r\n", target, m);
+    t_free(m);
+  }
+  
+  t_unref(self);
+}

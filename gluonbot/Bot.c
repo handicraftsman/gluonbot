@@ -585,18 +585,25 @@ void gb_flag_remove(GBFlag* filter) {
     goto gb_flag_remove_dealloc;
   }
   
-  int channeln, hostn, pluginn, namen;
-  channeln = sqlite3_bind_parameter_index(stmt, "channel");
-  hostn    = sqlite3_bind_parameter_index(stmt, "host");
-  pluginn  = sqlite3_bind_parameter_index(stmt, "plugin");
-  namen    = sqlite3_bind_parameter_index(stmt, "name");
+  int servern, channeln, hostn, pluginn, namen;
+  servern  = sqlite3_bind_parameter_index(stmt, ":server");
+  channeln = sqlite3_bind_parameter_index(stmt, ":channel");
+  hostn    = sqlite3_bind_parameter_index(stmt, ":host");
+  pluginn  = sqlite3_bind_parameter_index(stmt, ":plugin");
+  namen    = sqlite3_bind_parameter_index(stmt, ":name");
   
+  if (servern && filter->server)   sqlite3_bind_text(stmt, servern, filter->server, -1, SQLITE_TRANSIENT);
   if (channeln && filter->channel) sqlite3_bind_text(stmt, channeln, filter->channel, -1, SQLITE_TRANSIENT);
   if (hostn && filter->host)       sqlite3_bind_text(stmt, hostn, filter->host, -1, SQLITE_TRANSIENT);
   if (pluginn && filter->plugin)   sqlite3_bind_text(stmt, pluginn, filter->plugin, -1, SQLITE_TRANSIENT);
   if (namen && filter->name)       sqlite3_bind_text(stmt, namen, filter->name, -1, SQLITE_TRANSIENT);
   
-  sqlite3_step(stmt);
+  int ret;
+gb_flag_remove_step:
+  ret = sqlite3_step(stmt);
+  if (ret == SQLITE_ROW) goto gb_flag_remove_step;
+  if (ret == SQLITE_ERROR) tl_error(l, "%s", sqlite3_errmsg(GBBot.database));
+  sqlite3_finalize(stmt);
     
 gb_flag_remove_dealloc:
   t_free(channelp);
@@ -658,7 +665,7 @@ void gb_flag_insert(GBFlag* filter) {
   }
   
   char* req;
-  asprintf(&req, "INSERT INTO flags (server%s%s%s%s) VALUES (?%s%s%s%s)", channelp1, hostp1, pluginp1, namep1, channelp2, hostp2, pluginp2, namep2);
+  asprintf(&req, "INSERT INTO flags (server%s%s%s%s) VALUES (:server%s%s%s%s);", channelp1, hostp1, pluginp1, namep1, channelp2, hostp2, pluginp2, namep2);
   
   sqlite3_stmt* stmt;
   if (sqlite3_prepare(
@@ -669,23 +676,30 @@ void gb_flag_insert(GBFlag* filter) {
     NULL
   ) != SQLITE_OK) {
     tl_error(l, "%s", sqlite3_errmsg(GBBot.database));
-    goto gb_flag_remove_dealloc;
+    goto gb_flag_insert_dealloc;
   }
   
-  int channeln, hostn, pluginn, namen;
-  channeln = sqlite3_bind_parameter_index(stmt, "channel");
-  hostn    = sqlite3_bind_parameter_index(stmt, "host");
-  pluginn  = sqlite3_bind_parameter_index(stmt, "plugin");
-  namen    = sqlite3_bind_parameter_index(stmt, "name");
+  int servern, channeln, hostn, pluginn, namen;
+  servern  = sqlite3_bind_parameter_index(stmt, ":server");
+  channeln = sqlite3_bind_parameter_index(stmt, ":channel");
+  hostn    = sqlite3_bind_parameter_index(stmt, ":host");
+  pluginn  = sqlite3_bind_parameter_index(stmt, ":plugin");
+  namen    = sqlite3_bind_parameter_index(stmt, ":name");
   
+  if (servern && filter->server)   sqlite3_bind_text(stmt, servern, filter->server, -1, SQLITE_TRANSIENT);
   if (channeln && filter->channel) sqlite3_bind_text(stmt, channeln, filter->channel, -1, SQLITE_TRANSIENT);
   if (hostn && filter->host)       sqlite3_bind_text(stmt, hostn, filter->host, -1, SQLITE_TRANSIENT);
   if (pluginn && filter->plugin)   sqlite3_bind_text(stmt, pluginn, filter->plugin, -1, SQLITE_TRANSIENT);
   if (namen && filter->name)       sqlite3_bind_text(stmt, namen, filter->name, -1, SQLITE_TRANSIENT);
   
-  sqlite3_step(stmt);
+  int ret;
+gb_flag_insert_step:
+  ret = sqlite3_step(stmt);
+  if (ret == SQLITE_ROW) goto gb_flag_insert_step;
+  if (ret == SQLITE_ERROR) tl_error(l, "%s", sqlite3_errmsg(GBBot.database));
+  sqlite3_finalize(stmt);
     
-gb_flag_remove_dealloc:
+gb_flag_insert_dealloc:
   t_free(channelp1);
   t_free(channelp2);
   t_free(hostp1);
