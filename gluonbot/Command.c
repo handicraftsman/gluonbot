@@ -38,4 +38,5 @@ void gb_command_destroy(GBCommand* self) {
   t_free(self->description);
   t_free(self->usage);
   if (self->flag != NULL) t_free(self->flag);
+  t_unref(self->cooldowns);
 }

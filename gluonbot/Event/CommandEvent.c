@@ -154,7 +154,7 @@ void gb_event_command_handle(GBEventCommand* self) {
         flag->name    = strdup(command->flag);
         if (strcmp(command->flag, "world") == 0 || gb_flag_is_set(flag)) {
           if (is_command_available(self, command)) {
-            command->handler(self); 
+            if (command->handler != NULL) command->handler(self);
           }
         }
         t_unref(flag);

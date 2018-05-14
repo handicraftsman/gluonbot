@@ -15,8 +15,7 @@ GBCommand* cmd_key;
 void cmd_key_handler(GBEventCommand* e) {
   if (e->split->len == 1) {
     const int sz = 64;
-    if (key != NULL);
-    t_free(key);
+    if (key != NULL) t_free(key);
     key = t_malloc(sz + 1);
     if (!key) {
       perror("cmd_key_handler{t_malloc}");
@@ -97,7 +96,7 @@ void cmd_help_handler(GBEventCommand* e) { // check this
           
           gb_ircsocket_nreply(
             e,
-            "%s/%s | Usage: %s | Description: %s | Cooldown: %ds | Flag: %s | %s",
+            "%s/%s # Usage: %s # Description: %s # Cooldown: %ds # Flag: %s # %s",
             pluginp->key,
             commandp->key,
             command->usage,
@@ -160,6 +159,100 @@ void cmd_list_handler(GBEventCommand* e) {
   }
 }
 
+GBCommand* cmd_flag;
+TMap* cmd_flag_handler_flags;
+bool cmd_flag_handler_initialized = false;
+void cmd_flag_handler(GBEventCommand* e) {  
+  if (!cmd_flag_handler_initialized) {
+    cmd_flag_handler_initialized = true;
+    cmd_flag_handler_flags = t_map_new();
+  }
+  
+  TMapPair* flagp = t_map_get(cmd_flag_handler_flags, e->sock->name);
+  GBFlag* flag;
+  if (flagp == NULL) {
+    flagp = t_map_set_(cmd_flag_handler_flags, e->sock->name, gb_flag_new());
+  }
+  flag = flagp->unit->obj;
+  if (flag->server == NULL) flag->server = strdup(e->sock->name);
+  
+  if (e->split->len == 2) {
+    if (strcmp(e->split->arr[1]->obj, "flag") == 0) {
+      gb_ircsocket_nreply(
+        e,
+        "server=%s channel=%s host=%s plugin=%s name=%s",
+        flag->server ? flag->server : "*",
+        flag->channel ? flag->channel: "*",
+        flag->host ? flag->host : "*",
+        flag->plugin ? flag->plugin : "*",
+        flag->name ? flag->name : "*"
+      );
+    } else if (strcmp(e->split->arr[1]->obj, "clear") == 0) {
+      if (flag->channel != NULL) t_free(flag->channel);
+      flag->channel = NULL;
+    
+      if (flag->host != NULL) t_free(flag->host);
+      flag->host = NULL;
+      
+      if (flag->plugin != NULL) t_free(flag->plugin);
+      flag->plugin = NULL;
+      
+      if (flag->name != NULL) t_free(flag->name);
+      flag->name = NULL;
+      
+      gb_ircsocket_nreply(e, "Done!");
+    } else if (strcmp(e->split->arr[1]->obj, "insert") == 0) {
+      gb_flag_insert(flag);
+      gb_ircsocket_nreply(e, "Done!");
+    } else if (strcmp(e->split->arr[1]->obj, "remove") == 0) {
+      gb_flag_remove(flag);
+      gb_ircsocket_nreply(e, "Done!");
+    } else if (strcmp(e->split->arr[1]->obj, "list") == 0) {
+      TList* flags = gb_flag_list(flag);
+      t_list_foreach(flags, fn) {
+        GBFlag* f = fn->unit->obj;
+        gb_ircsocket_nreply(
+          e,
+          "server=%s channel=%s host=%s plugin=%s name=%s",
+          f->server ? f->server : "*",
+          f->channel ? f->channel: "*",
+          f->host ? f->host : "*",
+          f->plugin ? f->plugin : "*",
+          f->name ? f->name : "*"
+        );
+      }
+      t_unref(flags);
+    } else {
+      gb_ircsocket_nreply(e, "Invalid arguments");
+    }
+  } else if (e->split->len == 3) {
+    if (strcmp(e->split->arr[1]->obj, "set-channel") == 0) {
+      if (flag->channel != NULL) t_free(flag->channel);
+      flag->channel = strdup(e->split->arr[2]->obj);
+      gb_ircsocket_nreply(e, "Done!");
+    } else if (strcmp(e->split->arr[1]->obj, "set-host") == 0) {
+      if (flag->host != NULL) t_free(flag->host);
+      flag->host = strdup(e->split->arr[2]->obj);
+      gb_ircsocket_nreply(e, "Done!");
+    } else if (strcmp(e->split->arr[1]->obj, "set-plugin") == 0) {
+      if (flag->plugin != NULL) t_free(flag->plugin);
+      flag->plugin = strdup(e->split->arr[2]->obj);
+      gb_ircsocket_nreply(e, "Done!");
+    } else if (strcmp(e->split->arr[1]->obj, "set-name") == 0) {
+      if (flag->name != NULL) t_free(flag->name);
+      flag->name = strdup(e->split->arr[2]->obj);
+      gb_ircsocket_nreply(e, "Done!");
+    } else {
+      gb_ircsocket_nreply(e, "Invalid arguments");
+    }
+  } else {
+    gb_ircsocket_nreply(e, "Invalid arguments");
+  }
+  
+  
+  t_unref(flagp);
+}
+
 GBCommand* cmd_join;
 void cmd_join_handler(GBEventCommand* e) {
   if (e->split->len == 2) {
@@ -198,7 +291,7 @@ void gb_init() {
   cmd_key = gb_command_new((GBCommandInfo) {
     .name = "key",
     .usage = "key [key]",
-    .description = "Generates a key and prints it to stdout. If you give this command the printed key, you'll get admin permissions",
+    .description = "Generates a key and prints it to stdout. If you give this command the printed key, you'll get admin flagissions",
     .flag = "world",
     .cooldown = 0,
     .handler = (GBCommandHandler) cmd_key_handler
@@ -225,6 +318,16 @@ void gb_init() {
   });
   gb_register_command(cmd_list);
   
+  cmd_flag = gb_command_new((GBCommandInfo) {
+    .name = "flag",
+    .usage = "flag flag | clear | insert | remove | list | set-channel <channel> | set-host <host> | set-plugin <plugin> | set-name <name>",
+    .description = "Manipulates flags",
+    .flag = "flag",
+    .cooldown = 0,
+    .handler = (GBCommandHandler) cmd_flag_handler
+  });
+  gb_register_command(cmd_flag);
+  
   cmd_join = gb_command_new((GBCommandInfo) {
     .name = "join",
     .usage = "join <channel> [password]",
@@ -250,5 +353,10 @@ void gb_deinit() {
   t_unref(cmd_key);
   t_unref(cmd_help);
   t_unref(cmd_list);
+  t_unref(cmd_flag);
+  if (cmd_flag_handler_initialized) {
+    t_unref(cmd_flag_handler_flags);
+  }
   t_unref(cmd_join);
+  t_unref(cmd_part);
 }
