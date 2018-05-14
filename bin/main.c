@@ -18,7 +18,6 @@ void display_usage(char* pname) {
   fprintf(stderr, "Available options: \n");
   fprintf(stderr, "  -h        --help                Show this message\n");
   fprintf(stderr, "  -c FILE   --config-file FILE    Config file [./gluonbot.xml]\n");
-  //fprintf(stderr, "  -b FILE   --database-file FILE  Database file [./particlebot.db]\n");
   fprintf(stderr, "  -l LEVEL  --log-level LEVEL     Log level [info]\n");
   fprintf(stderr, "Possible log levels: debug, [io | irc], info, warning, error, important, critical\n");
   exit(1);
@@ -62,20 +61,16 @@ int main(int argc, char** argv) {
   static struct option long_options[] = {
     {"help",          0,                 NULL, 'h'},
     {"config-file",   required_argument, NULL, 'c'},
-    //{"database-file", required_argument, NULL, 'd'},
     {"log-level",     required_argument, NULL, 'l'},
   };
 
   char* config_file = "./gluonbot.xml";
 
-  while ((opt = getopt_long(argc, argv, "hc:d:l:", long_options, NULL)) != EOF)
+  while ((opt = getopt_long(argc, argv, "hc:l:", long_options, NULL)) != EOF)
     switch(opt) {
     case 'c':
       config_file = optarg;
       break;
-    //case 'd':
-    //  db_file = optarg;
-    //  break;
     case 'l':
       set_log_level(optarg);
       break;
