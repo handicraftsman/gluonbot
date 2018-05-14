@@ -352,35 +352,65 @@ void gb_ircsocket_join(GBIRCSocket* self, char* chan, char* pass) {
   t_unref(self);
 }
 
-void gb_ircsocket_privmsg(GBIRCSocket* self, char* target, char* msg) {
-  assert(self   != NULL);
-  assert(target != NULL);
-  assert(msg    != NULL);
+void gb_ircsocket_part(GBIRCSocket* self, char* chan, char* reason) {
+  assert(self != NULL);
+  assert(chan != NULL);
   t_ref(self);
   
-  size_t len = strlen(msg);
-  
-  for (int i = 0; i < (len / 400); i++) {
-    char* m = strndup(msg+ 400 * i, 400);
-    gb_ircsocket_write(self, "PRIVMSG %s :%s\r\n", target, m);
-    t_free(m);
+  if (reason != NULL) {
+    gb_ircsocket_write(self, "PART %s :%s\r\n", chan, reason);
+  } else {
+    gb_ircsocket_write(self, "PART %s :Bye!\r\n", chan);
   }
   
   t_unref(self);
 }
 
-void gb_ircsocket_notice(GBIRCSocket* self, char* target, char* msg) {
+void gb_ircsocket_privmsg(GBIRCSocket* self, char* target, char* fmt, ...) {
   assert(self   != NULL);
   assert(target != NULL);
-  assert(msg    != NULL);
+  assert(fmt    != NULL);
   t_ref(self);
+  
+  va_list args;
+  va_start(args, fmt);
+  char* msg;
+  vasprintf(&msg, fmt, args);
+  va_end(args);
   
   size_t len = strlen(msg);
   size_t sz = (len / 400);
   sz = sz == 0 ? 1 : sz;
   
   for (int i = 0; i < sz; i++) {
-    char* m = strndup(msg+ 400 * i, 400);
+    char* m = strndup(msg + 400 * i, 400);
+    gb_ircsocket_write(self, "PRIVMSG %s :%s\r\n", target, m);
+    t_free(m);
+  }
+  
+  t_free(msg);
+  
+  t_unref(self);
+}
+
+void gb_ircsocket_notice(GBIRCSocket* self, char* target, char* fmt, ...) {
+  assert(self   != NULL);
+  assert(target != NULL);
+  assert(fmt    != NULL);
+  t_ref(self);
+  
+  va_list args;
+  va_start(args, fmt);
+  char* msg;
+  vasprintf(&msg, fmt, args);
+  va_end(args);
+  
+  size_t len = strlen(msg);
+  size_t sz = (len / 400);
+  sz = sz == 0 ? 1 : sz;
+  
+  for (int i = 0; i < sz; i++) {
+    char* m = strndup(msg + 400 * i, 400);
     gb_ircsocket_write(self, "NOTICE %s :%s\r\n", target, m);
     t_free(m);
   }

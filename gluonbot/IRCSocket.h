@@ -65,12 +65,12 @@ void gb_ircsocket_part(GBIRCSocket* self, char* chan, char* reason);
 /// Sends given message to the given target
 /// \param target Channel/user to send to
 /// \param message Message to send
-void gb_ircsocket_privmsg(GBIRCSocket* self, char* target, char* msg);
+void gb_ircsocket_privmsg(GBIRCSocket* self, char* target, char* fmt, ...);
 
 /// Sends given notice to the given target
 /// \param target Channel/user to notice
 /// \param message Message to send
-void gb_ircsocket_notice(GBIRCSocket* self, char* target, char* msg);
+void gb_ircsocket_notice(GBIRCSocket* self, char* target, char* fmt, ...);
 
 #define gb_ircsocket_reply(e, fmt, ...) gb_ircsocket_privmsg(e->sock, strcmp(e->target, e->sock->nick) == 0 ? e->nick : e->target, fmt, ##__VA_ARGS__)
 #define gb_ircsocket_nreply(e, fmt, ...) gb_ircsocket_notice(e->sock, e->nick, fmt, ##__VA_ARGS__)

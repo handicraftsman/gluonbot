@@ -311,6 +311,7 @@ void gb_flag_destroy(GBFlag* self) {
 
 
 bool gb_flag_is_set(GBFlag* self) {
+  assert(self != NULL);
   assert(self->server != NULL);
   assert(self->channel != NULL);
   assert(self->host != NULL);

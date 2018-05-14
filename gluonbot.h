@@ -4,3 +4,4 @@
 #include "gluonbot/Event.h"
 #include "gluonbot/IRCSocket.h"
 #include "gluonbot/Plugin.h"
+#include "gluonbot/utils.h"
