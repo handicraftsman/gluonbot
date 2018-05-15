@@ -3,6 +3,7 @@
 #include "Bot.h"
 #include "Bot.h"
 #include "ChannelDesc.h"
+#include "Group.h"
 #include "IRCSocket.h"
 #include "Plugin.h"
 
@@ -26,8 +27,9 @@ void gb_bot_init() {
   
   GBBot.sockets = t_map_new();
   GBBot.plugins = t_map_new();
+  GBBot.groups  = t_map_new();
   
-  GBBot.prefix = strdup("!");
+  GBBot.prefix  = strdup("!");
   GBBot.db_path = strdup("./gluonbot.db");
 }
 
@@ -220,6 +222,62 @@ void gb_bot_load_config(char* config_path) {
       t_unref(p);
       
       xmlFree(name);
+    } else if (strcmp((char*) c->name, "group") == 0) {
+      char* name = NULL;
+      
+      for (xmlAttrPtr attr = c->properties; attr != NULL; attr = attr->next) {
+        if (strcmp((char*) attr->name, "name") == 0) {
+          name = (char*) xmlNodeListGetString(root->doc, attr->children, 1);
+          tl_debug(l, "groups <- %s", name);
+        }
+      }
+      
+      if (name == NULL) {
+        tl_error(l, "Noticed an unnamed group node! (line %d)", c->line);
+        continue;
+      }
+      
+      GBGroup* g = gb_group_new(name);
+      
+      for (xmlNodePtr gc = c->children; gc != NULL; gc = gc->next) {
+        if (strcmp((char*) gc->name, "flag") == 0) {
+          char* fplugin = NULL;
+          char* fname   = NULL;
+          
+          for (xmlAttrPtr attr = gc->properties; attr != NULL; attr = attr->next) {
+            if (strcmp((char*) attr->name, "plugin") == 0) {
+              char* fplugins = (char*) xmlNodeListGetString(root->doc, attr->children, 1);
+              fplugin = strdup(fplugins);
+              xmlFree(fplugins);
+            } else if (strcmp((char*) attr->name, "name") == 0) {
+              char* fnames = (char*) xmlNodeListGetString(root->doc, attr->children, 1);
+              fname = strdup(fnames);
+              xmlFree(fnames);
+            }
+          }
+          
+          if (fplugin == NULL || fname == NULL) {
+            tl_error(l, "Noticed an incomplete flag node! (line %d)", gc->line);
+            continue;
+          }
+          
+          GBFlag* flag = gb_flag_new();
+          flag->plugin = strdup(fplugin);
+          flag->name   = strdup(fname);
+          gb_group_add_flag(g, flag);
+          t_unref(flag);
+          
+          tl_debug(l, "groups[%s] <- %s/%s", g->name, fplugin, fname);
+          
+          t_free(fplugin);
+          t_free(fname);          
+        }
+      }
+      
+      t_unref(t_map_set_(GBBot.groups, name, g));
+      t_unref(g);
+      
+      xmlFree(name);
     }
   }
   
@@ -260,7 +318,7 @@ void gb_bot_load_database() {
       "channel VARCHAR(64), "
       "host VARCHAR(64), "
       "plugin VARCHAR(64), "
-      "name VARCHAR(64)"
+      "name VARCHAR(64) "
     ");",
     NULL,
     NULL,

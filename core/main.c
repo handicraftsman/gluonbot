@@ -253,6 +253,115 @@ void cmd_flag_handler(GBEventCommand* e) {
   t_unref(flagp);
 }
 
+GBCommand* cmd_group;
+void cmd_group_handler(GBEventCommand* e) { // todo
+  if (e->split->len == 2) {
+    if (strcmp(e->split->arr[1]->obj, "list") == 0) {
+      TVector* names = t_vector_new(0, 0);
+      t_list_foreach(GBBot.groups->pairs, groupn) {
+        TMapPair* groupp = groupn->unit->obj;
+        GBGroup* group = groupp->unit->obj;
+        t_vector_push_(names, t_gcunit_new_(strdup(group->name), t_free));
+      }
+      char* namess = gbu_strjoin(names, ", ");
+      gb_ircsocket_nreply(e, "Groups: %s", namess);
+      t_free(namess);
+      t_unref(names);
+    } else {
+      gb_ircsocket_nreply(e, "Invalid arguments");
+    }
+  } else if (e->split->len == 3) {
+    if (strcmp(e->split->arr[1]->obj, "list") == 0) {
+      char* gname = e->split->arr[2]->obj;
+      TMapPair* groupp = t_map_get(GBBot.groups, gname);
+      if (groupp == NULL) {
+        gb_ircsocket_nreply(e, "No such group");
+      } else {
+        GBGroup* group = groupp->unit->obj;
+        t_list_foreach(group->flags, flagp) {
+          GBFlag* flag = flagp->unit->obj;
+          gb_ircsocket_nreply(
+            e,
+            "plugin=%s name=%s",
+            flag->plugin ? flag->plugin : "(null)",
+            flag->name   ? flag->name   : "(null)"
+          );
+        }
+      }
+    }
+  } else if (e->split->len == 4) {
+    if (strcmp(e->split->arr[1]->obj, "givec") == 0) {
+      char* channel = e->split->arr[2]->obj;
+      char* gname = e->split->arr[3]->obj;
+      TMapPair* groupp = t_map_get(GBBot.groups, gname);
+      if (groupp == NULL) {
+        gb_ircsocket_nreply(e, "No such group");
+      } else {
+        GBGroup* group = groupp->unit->obj;
+        GBFlag* f = gb_flag_new();
+        f->server  = strdup(e->sock->name);
+        f->channel = strdup(channel);
+        gb_group_give(group, f);
+        t_unref(f);
+        t_unref(groupp);
+        gb_ircsocket_nreply(e, "Done!");
+      }
+    } else if (strcmp(e->split->arr[1]->obj, "giveh") == 0) {
+      char* host = e->split->arr[2]->obj;
+      char* gname = e->split->arr[3]->obj;
+      TMapPair* groupp = t_map_get(GBBot.groups, gname);
+      if (groupp == NULL) {
+        gb_ircsocket_nreply(e, "No such group");
+      } else {
+        GBGroup* group = groupp->unit->obj;
+        GBFlag* f = gb_flag_new();
+        f->server = strdup(e->sock->name);
+        f->host   = strdup(host);
+        gb_group_give(group, f);
+        t_unref(f);
+        t_unref(groupp);
+        gb_ircsocket_nreply(e, "Done!");
+      }
+    } else if (strcmp(e->split->arr[1]->obj, "takec") == 0) {
+      char* channel = e->split->arr[2]->obj;
+      char* gname = e->split->arr[3]->obj;
+      TMapPair* groupp = t_map_get(GBBot.groups, gname);
+      if (groupp == NULL) {
+        gb_ircsocket_nreply(e, "No such group");
+      } else {
+        GBGroup* group = groupp->unit->obj;
+        GBFlag* f = gb_flag_new();
+        f->server  = strdup(e->sock->name);
+        f->channel = strdup(channel);
+        gb_group_take(group, f);
+        t_unref(f);
+        t_unref(groupp);
+        gb_ircsocket_nreply(e, "Done!");
+      }
+    } else if (strcmp(e->split->arr[1]->obj, "takeh") == 0) {
+      char* host = e->split->arr[2]->obj;
+      char* gname = e->split->arr[3]->obj;
+      TMapPair* groupp = t_map_get(GBBot.groups, gname);
+      if (groupp == NULL) {
+        gb_ircsocket_nreply(e, "No such group");
+      } else {
+        GBGroup* group = groupp->unit->obj;
+        GBFlag* f = gb_flag_new();
+        f->server = strdup(e->sock->name);
+        f->host   = strdup(host);
+        gb_group_take(group, f);
+        t_unref(f);
+        t_unref(groupp);
+        gb_ircsocket_nreply(e, "Done!");
+      }
+    } else {
+      gb_ircsocket_nreply(e, "Invalid arguments");
+    }
+  } else {
+    gb_ircsocket_nreply(e, "Invalid arguments");
+  }
+}
+
 GBCommand* cmd_join;
 void cmd_join_handler(GBEventCommand* e) {
   if (e->split->len == 2) {
@@ -328,6 +437,16 @@ void gb_init() {
   });
   gb_register_command(cmd_flag);
   
+  cmd_group = gb_command_new((GBCommandInfo) {
+    .name = "group",
+    .usage = "group list | info <group> | givec <channel> <group> | giveh <host> <group> | takec <channel> <group> | takeh <host> <group>",
+    .description = "Manipulates flags using groups - a more high-level interface to flags",
+    .flag = "flag",
+    .cooldown = 0,
+    .handler = (GBCommandHandler) cmd_group_handler
+  });
+  gb_register_command(cmd_group);
+  
   cmd_join = gb_command_new((GBCommandInfo) {
     .name = "join",
     .usage = "join <channel> [password]",
@@ -357,6 +476,7 @@ void gb_deinit() {
   if (cmd_flag_handler_initialized) {
     t_unref(cmd_flag_handler_flags);
   }
+  t_unref(cmd_group);
   t_unref(cmd_join);
   t_unref(cmd_part);
 }

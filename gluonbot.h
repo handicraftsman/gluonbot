@@ -2,6 +2,7 @@
 #include "gluonbot/ChannelDesc.h"
 #include "gluonbot/Command.h"
 #include "gluonbot/Event.h"
+#include "gluonbot/Group.h"
 #include "gluonbot/IRCSocket.h"
 #include "gluonbot/Plugin.h"
 #include "gluonbot/utils.h"

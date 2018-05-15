@@ -54,6 +54,7 @@ GBIRCSocket* gb_ircsocket_new(char* name) {
   memset(&self->queue_mtx, 0, sizeof(self->queue_mtx));
   pthread_mutex_init(&self->queue_mtx, NULL);
   self->last_write = 0;
+  self->burst = 0;
   
   self->user_cache = gb_user_cache_new();
   
@@ -264,7 +265,10 @@ void gb_ircsocket_io_loop(GBIRCSocket* self) {
   l_write:
     gettimeofday(&ctimev, NULL);
     long long ctime = (ctimev.tv_sec * 1000) + (ctimev.tv_usec / 1000);
-    if (self->last_write == 0 || ctime - self->last_write >= 700) {
+    if (self->last_write == 0 || ctime - self->last_write >= 700 || self->burst < 5) {
+      if (self->burst < 5 && ctime - self->last_write < 700) ++(self->burst);
+      if (ctime - self->last_write >= 1000) self->burst = 0;
+      
       struct timeval tv = {
         .tv_sec = 0,
         .tv_usec = 10000

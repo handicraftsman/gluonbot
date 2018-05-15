@@ -12,6 +12,7 @@
 typedef struct _GBBot {
   TMap* sockets;
   TMap* plugins;
+  TMap* groups;
   
   char* prefix;
   

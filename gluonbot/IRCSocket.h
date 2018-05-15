@@ -35,6 +35,7 @@ typedef struct GBIRCSocket {
   TList* queue; ///< \private
   pthread_mutex_t queue_mtx; ///< \private
   long long last_write; ///< \private
+  int burst;
   
   GBUserCache* user_cache; ///< \summary stores info about all known users
 } GBIRCSocket;
