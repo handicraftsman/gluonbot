@@ -29,7 +29,7 @@ GBPlugin* gb_plugin_new(char* name, xmlNodePtr root) {
   self->l = (char*) malloc(strlen(self->name) + 2);
   sprintf(self->l, "?%s", self->name);
   
-  memset(self->handlers, 0, (sizeof(GBEventHandleFunc) * _GBEventType_SIZE) - 1);
+  memset(self->handlers, 0, (sizeof(GBEventHandleFunc) * _GBEventType_SIZE));
   self->commands = t_map_new();
   
   char* plugin_paths[] = {
